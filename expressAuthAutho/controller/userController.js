@@ -2,27 +2,16 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { User } from '../model/userModel.js';
 import dotenv from 'dotenv';
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import crypto from 'crypto';
 
 dotenv.config();
 
 const SECRET_KEY = process.env.SECRET_KEY;
 const PORT = process.env.PORT || 5000;
-// Setup Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port:465,
-  secure: true,//enable ssl but for enabling tls set to false and port 587
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_PASSWORD
-},
- tls: {
-    rejectUnauthorized: false  // Ensure verification in development && set to true for production purpose
-}
-}
-);
+
+// Set SendGrid API Key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const register = async (req, res) => {
   console.log('Received registration request:', req.body);
@@ -52,21 +41,22 @@ const register = async (req, res) => {
     await user.save();
 
     const verificationLink = `http://localhost:${PORT}/users/verify-email/${verificationToken}`;
-    await transporter.sendMail({
-      from: process.env.EMAIL,
+    const msg = {
       to: email,
+      from: process.env.EMAIL,
       subject: 'Verify your email',
-      html: `<p>Please click <a href="${verificationLink}">here</a> to verify your email</p>`
-    }, (error, info) => {
-      if (error) {
-        console.error('Error sending verification email to:', email, error);
-      } else {
-        console.log('Verification email sent to:', email, info.response);
-      }
-    });
+      html: `<p>Please click <a href="${verificationLink}">here</a> to verify your email</p>`,
+    };
+    
+    try {
+      await sgMail.send(msg);
+      console.log('Verification email sent to:', email);
+    } catch (error) {
+      console.error('Error sending verification email to:', email, error);
+    }
 
     // Include the user’s role in the token
-    const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ _id: user._id, role: user.role }, SECRET_KEY, { expiresIn: '1h' });
     res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
 
     console.log('User registered successfully');
@@ -76,7 +66,6 @@ const register = async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 };
-
 
 const login = async (req, res) => {
   console.log('Received login request:', req.body);
@@ -100,7 +89,7 @@ const login = async (req, res) => {
       return res.status(401).send('Invalid Credentials, password mismatch');
     }
     // Generate JWT with role
-    const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ _id: user._id, role: user.role }, SECRET_KEY, { expiresIn: '1h' });
     res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
 
     console.log('User logged in successfully');
@@ -111,9 +100,6 @@ const login = async (req, res) => {
   }
 };
 
-
-
-// Forgot Password Request
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -123,12 +109,19 @@ const forgotPassword = async (req, res) => {
     const token = jwt.sign({ _id: user._id }, SECRET_KEY, { expiresIn: '1h' });
     const resetLink = `http://localhost:3000/users/reset-password/${token}`;
 
-    await transporter.sendMail({
-      from: process.env.EMAIL,
+    const msg = {
       to: email,
+      from: process.env.EMAIL,
       subject: 'Password Reset Request',
-      html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`
-    });
+      html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
+    };
+
+    try {
+      await sgMail.send(msg);
+      console.log('Password reset email sent to:', email);
+    } catch (error) {
+      console.error('Error sending password reset email to:', email, error);
+    }
 
     res.send('Password reset link sent to your email');
   } catch (error) {
@@ -137,7 +130,6 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-// Reset Password
 const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;

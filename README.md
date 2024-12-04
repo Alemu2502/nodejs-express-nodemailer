@@ -64,13 +64,13 @@ Create a .env file in the root directory and add the following:
 
 env
 
-Mongo_URL= mongodb=your-mongodb-url
-PORT= ypour port
-SECRET_KEY= your-secret-key
-EMAIL_PASSWORD= your generated password(app sepecific password)
-EMAIL= your email 
-port=your ssl/tls port
-host=smtp.gmail.com
+1. Mongo_URL= mongodb=your-mongodb-url
+2. PORT= ypour port
+3. SECRET_KEY= your-secret-key
+4. EMAIL_PASSWORD= your generated password(app sepecific password)
+5. EMAIL= your email 
+6. port=your ssl/tls port
+7. host=smtp.gmail.com
 
 # Running the Application
 Start the development server

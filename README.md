@@ -80,7 +80,7 @@ The server will be running at ***`http://localhost:3000`***
 
 # API Endpoints
 1. ##### User Authentication and Management
-POST `***/users/register***`: Register a new user and send email verification
+POST ```/users/register```: Register a new user and send email verification
 
 POST `***/users/login***`: Login a user
 
